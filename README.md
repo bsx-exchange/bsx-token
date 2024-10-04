@@ -1,12 +1,12 @@
 # BSX Token
 
-The BSX exchange's native token (symbol: BSX) is used for governance and utility purposes within the platform.
+The BSX exchange's native token is used for governance and utility purposes within the platform.
 
 ## Metadata
 
 - **Name**: BSX
 - **Symbol**: BSX
-- **Decimals**: 182
+- **Decimals**: 18
 - **Total Supply**: 1,000,000,000
 
 ## Features
