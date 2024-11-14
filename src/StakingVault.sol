@@ -11,7 +11,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { ERC20Mintable } from "./ERC20Mintable.sol";
 import { IStakingVault } from "./interfaces/IStakingVault.sol";
 
 contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, ERC20VotesUpgradeable {
@@ -28,10 +27,10 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     uint256 public lastRewardUpdateTimestamp;
     uint256 public lastAccumulatedRewardPerToken;
 
-    ERC20Mintable public rewardToken;
     IERC20 public stakingToken;
 
-    mapping(address => UserStakeInfo) private _userStakes;
+    mapping(address => uint256) public lastAccumulatedRewards;
+    mapping(address => uint256) private _rewards;
     mapping(address => mapping(uint256 => UnstakeRequest)) private _unstakeRequests;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -42,7 +41,6 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     function initialize(
         address _owner,
         IERC20 _stakingToken,
-        ERC20Mintable _rewardToken,
         uint256 _rewardRate,
         uint256 _rewardPeriod
     )
@@ -57,7 +55,6 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
         __ReentrancyGuard_init();
 
         stakingToken = _stakingToken;
-        rewardToken = _rewardToken;
         rewardRate = _rewardRate;
         rewardPeriod = _rewardPeriod;
         lastRewardUpdateTimestamp = block.timestamp;
@@ -66,8 +63,8 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     modifier updateReward(address account) {
         lastAccumulatedRewardPerToken = getAccumulatedRewardPerToken();
         lastRewardUpdateTimestamp = block.timestamp;
-        _userStakes[account].unclaimedRewards = getRewards(account);
-        _userStakes[account].lastAccumulatedReward = lastAccumulatedRewardPerToken;
+        _rewards[account] = getRewards(account);
+        lastAccumulatedRewards[account] = lastAccumulatedRewardPerToken;
         _;
     }
 
@@ -150,17 +147,6 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     }
 
     /// @inheritdoc IStakingVault
-    function claimRewards() external nonReentrant updateReward(msg.sender) {
-        address account = msg.sender;
-        uint256 rewards = _userStakes[account].unclaimedRewards;
-
-        _userStakes[account].unclaimedRewards = 0;
-        rewardToken.mint(account, rewards);
-
-        emit RewardsClaimed(account, rewards);
-    }
-
-    /// @inheritdoc IStakingVault
     function updateRewardConfig(uint256 _rewardRate, uint256 _rewardPeriod) external onlyOwner {
         if (_rewardPeriod == 0) {
             revert ZeroRewardPeriod();
@@ -200,22 +186,15 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     }
 
     /// @inheritdoc IStakingVault
-    function getUserStakeInfo(address account) external view returns (UserStakeInfo memory) {
-        return _userStakes[account];
-    }
-
-    /// @inheritdoc IStakingVault
     function getUnstakeRequest(address account, uint256 requestId) external view returns (UnstakeRequest memory) {
         return _unstakeRequests[account][requestId];
     }
 
     /// @inheritdoc IStakingVault
     function getRewards(address account) public view returns (uint256) {
-        return _userStakes[account].unclaimedRewards
+        return _rewards[account]
             + Math.mulDiv(
-                balanceOf(account),
-                getAccumulatedRewardPerToken() - _userStakes[account].lastAccumulatedReward,
-                REWARD_SCALE
+                balanceOf(account), getAccumulatedRewardPerToken() - lastAccumulatedRewards[account], REWARD_SCALE
             );
     }
 }

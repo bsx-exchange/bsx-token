@@ -7,7 +7,6 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BsxToken } from "src/BsxToken.sol";
-import { ERC20Mintable } from "src/ERC20Mintable.sol";
 import { IStakingVault, StakingVault } from "src/StakingVault.sol";
 
 contract StakingVaultTest is Test {
@@ -19,7 +18,6 @@ contract StakingVaultTest is Test {
     address private owner = makeAddr("owner");
 
     BsxToken private stakingToken;
-    ERC20Mintable private rewardToken;
     uint256 private rewardRate = 10 ether;
     uint256 private rewardPeriod = 30 days;
 
@@ -27,13 +25,6 @@ contract StakingVaultTest is Test {
         vm.startPrank(owner);
 
         stakingToken = new BsxToken(owner);
-        address rewardTokenImpl = address(new ERC20Mintable());
-        address rewardTokenProxy = address(
-            new TransparentUpgradeableProxy(
-                rewardTokenImpl, owner, abi.encodeWithSelector(ERC20Mintable.initialize.selector, owner)
-            )
-        );
-        rewardToken = ERC20Mintable(rewardTokenProxy);
 
         address stakingVaultImpl = address(new StakingVault());
         address stakingVaultProxy = address(
@@ -41,18 +32,11 @@ contract StakingVaultTest is Test {
                 stakingVaultImpl,
                 owner,
                 abi.encodeWithSelector(
-                    StakingVault.initialize.selector,
-                    owner,
-                    address(stakingToken),
-                    address(rewardToken),
-                    rewardRate,
-                    rewardPeriod
+                    StakingVault.initialize.selector, owner, address(stakingToken), rewardRate, rewardPeriod
                 )
             )
         );
         stakingVault = StakingVault(stakingVaultProxy);
-
-        rewardToken.grantMinterRole(address(stakingVault));
 
         stakingToken.transfer(user, 100_000 ether);
 
@@ -65,7 +49,6 @@ contract StakingVaultTest is Test {
     function test_initialize() public view {
         assertEq(stakingVault.owner(), owner);
         assertEq(address(stakingVault.stakingToken()), address(stakingToken));
-        assertEq(address(stakingVault.rewardToken()), address(rewardToken));
         assertEq(stakingVault.rewardRate(), 10 ether);
         assertEq(stakingVault.rewardPeriod(), 30 days);
     }
@@ -89,6 +72,11 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.totalSupply(), stakeAmount);
         assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
         assertEq(stakingVault.lastAccumulatedRewardPerToken(), 0);
+
+        skip(5 * rewardPeriod);
+
+        assertEq(stakingVault.getRewards(user), (5 * rewardRate * stakeAmount) / 1e18);
+        assertEq(stakingVault.getAccumulatedRewardPerToken(), 5 * rewardRate);
     }
 
     function test_stake_multipleTimes() public {
@@ -107,9 +95,8 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
         assertEq(stakingVault.lastAccumulatedRewardPerToken(), 0);
 
-        IStakingVault.UserStakeInfo memory userStakeInfo = stakingVault.getUserStakeInfo(user);
-        assertEq(userStakeInfo.lastAccumulatedReward, 0);
-        assertEq(userStakeInfo.unclaimedRewards, 0);
+        assertEq(stakingVault.getRewards(user), 0);
+        assertEq(stakingVault.lastAccumulatedRewards(user), 0);
 
         // second stake
         skip(4 * rewardPeriod);
@@ -126,9 +113,13 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
         assertEq(stakingVault.lastAccumulatedRewardPerToken(), 4 * rewardRate);
 
-        userStakeInfo = stakingVault.getUserStakeInfo(user);
-        assertEq(userStakeInfo.lastAccumulatedReward, 4 * rewardRate);
-        assertEq(userStakeInfo.unclaimedRewards, 4 * rewardRate * stakeAmount1 / 1e18);
+        assertEq(stakingVault.getRewards(user), 4 * rewardRate * stakeAmount1 / 1e18);
+        assertEq(stakingVault.lastAccumulatedRewards(user), 4 * rewardRate);
+
+        skip(2 * rewardPeriod);
+
+        assertEq(stakingVault.getRewards(user), (6 * rewardRate * stakeAmount1 + 2 * rewardRate * stakeAmount2) / 1e18);
+        assertEq(stakingVault.getAccumulatedRewardPerToken(), 4 * rewardRate + 2 * rewardRate);
     }
 
     function test_stake_revertIfZeroAmount() public {
@@ -158,9 +149,8 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
         assertEq(stakingVault.lastAccumulatedRewardPerToken(), 2 * rewardRate);
 
-        IStakingVault.UserStakeInfo memory userStakeInfo = stakingVault.getUserStakeInfo(user);
-        assertEq(userStakeInfo.lastAccumulatedReward, 2 * rewardRate);
-        assertEq(userStakeInfo.unclaimedRewards, 2 * rewardRate * stakeAmount / 1e18);
+        assertEq(stakingVault.getRewards(user), 2 * rewardRate * stakeAmount / 1e18);
+        assertEq(stakingVault.lastAccumulatedRewards(user), 2 * rewardRate);
 
         IStakingVault.UnstakeRequest memory unstakeRequest = stakingVault.getUnstakeRequest(user, requestId);
         assertEq(unstakeRequest.amount, unstakeAmount);
@@ -246,9 +236,8 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
         assertEq(stakingVault.lastAccumulatedRewardPerToken(), accRewards);
 
-        IStakingVault.UserStakeInfo memory userStakeInfo = stakingVault.getUserStakeInfo(user);
-        assertEq(userStakeInfo.lastAccumulatedReward, accRewards);
-        assertEq(userStakeInfo.unclaimedRewards, rewards);
+        assertEq(stakingVault.getRewards(user), rewards);
+        assertEq(stakingVault.lastAccumulatedRewards(user), accRewards);
 
         IStakingVault.UnstakeRequest memory unstakeRequest = stakingVault.getUnstakeRequest(user, requestId);
         assertEq(unstakeRequest.amount, unstakeAmount);
@@ -404,29 +393,6 @@ contract StakingVaultTest is Test {
             abi.encodeWithSelector(IStakingVault.Cooldown.selector, user, requestId, initTimestamp + 14 days)
         );
         stakingVault.unstake(requestIds);
-    }
-
-    function test_claimRewards() public {
-        uint256 stakeAmount = 10_000 ether;
-
-        vm.startPrank(user);
-
-        stakingVault.stake(user, stakeAmount);
-
-        // skip 3 reward periods
-        skip(3 * rewardPeriod);
-        uint256 userRewards = 3 * rewardRate * stakeAmount / 1e18;
-        uint256 accRewards = 3 * rewardRate;
-        assertEq(stakingVault.getRewards(user), userRewards);
-
-        vm.expectEmit();
-        emit IStakingVault.RewardsClaimed(user, userRewards);
-        stakingVault.claimRewards();
-
-        assertEq(stakingVault.getRewards(user), 0);
-        assertEq(stakingVault.lastAccumulatedRewardPerToken(), accRewards);
-        assertEq(stakingVault.getUserStakeInfo(user).unclaimedRewards, 0);
-        assertEq(rewardToken.balanceOf(user), userRewards);
     }
 
     function test_updateRewardConfig() public {

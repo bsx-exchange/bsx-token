@@ -11,11 +11,6 @@ interface IStakingVault {
         EXECUTED
     }
 
-    struct UserStakeInfo {
-        uint256 lastAccumulatedReward;
-        uint256 unclaimedRewards;
-    }
-
     struct UnstakeRequest {
         uint256 amount;
         uint256 requestTimestamp;
@@ -88,10 +83,6 @@ interface IStakingVault {
     /// @dev Emits {Unstaked} event
     function unstake(uint256[] memory requestIds) external;
 
-    /// @notice Claim rewards
-    /// @dev Emits {RewardsClaimed} event
-    function claimRewards() external;
-
     /// @notice Update reward config
     /// @dev Emits {RewardConfigUpdated} event
     function updateRewardConfig(uint256 rewardRate, uint256 rewardPeriod) external;
@@ -100,9 +91,6 @@ interface IStakingVault {
 
     /// @notice Get current accumulated reward per token
     function getAccumulatedRewardPerToken() external view returns (uint256);
-
-    /// @notice Get user stake info
-    function getUserStakeInfo(address account) external view returns (UserStakeInfo memory);
 
     /// @notice Get unstake request
     function getUnstakeRequest(address account, uint256 requestId) external view returns (UnstakeRequest memory);
