@@ -69,7 +69,12 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     }
 
     /// @inheritdoc IStakingVault
-    function stake(address account, uint256 amount) external nonReentrant updateReward(account) {
+    function stake(uint256 amount) external updateReward(msg.sender) {
+        stake(msg.sender, amount);
+    }
+
+    /// @inheritdoc IStakingVault
+    function stake(address account, uint256 amount) public nonReentrant updateReward(account) {
         if (amount == 0) revert ZeroAmount();
 
         _mint(account, amount);

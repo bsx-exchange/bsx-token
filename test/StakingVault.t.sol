@@ -60,6 +60,32 @@ contract StakingVaultTest is Test {
         uint256 stakeAmount = 6000 ether;
         vm.expectEmit();
         emit IStakingVault.Staked(user, stakeAmount);
+        stakingVault.stake(stakeAmount);
+
+        assertEq(stakingToken.balanceOf(user), balanceBefore - stakeAmount);
+        assertEq(stakingToken.balanceOf(address(stakingVault)), stakeAmount);
+        assertEq(stakingToken.nonces(user), 0);
+
+        assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
+        assertEq(stakingVault.lastAccumulatedRewardPerToken(), 0);
+        assertEq(stakingVault.balanceOf(user), stakeAmount);
+        assertEq(stakingVault.totalSupply(), stakeAmount);
+        assertEq(stakingVault.lastRewardUpdateTimestamp(), block.timestamp);
+        assertEq(stakingVault.lastAccumulatedRewardPerToken(), 0);
+
+        skip(5 * rewardPeriod);
+
+        assertEq(stakingVault.getRewards(user), (5 * rewardRate * stakeAmount) / 1e18);
+        assertEq(stakingVault.getAccumulatedRewardPerToken(), 5 * rewardRate);
+    }
+
+    function test_stake_forAccount() public {
+        vm.startPrank(user);
+
+        uint256 balanceBefore = stakingToken.balanceOf(user);
+        uint256 stakeAmount = 6000 ether;
+        vm.expectEmit();
+        emit IStakingVault.Staked(user, stakeAmount);
         stakingVault.stake(user, stakeAmount);
 
         assertEq(stakingToken.balanceOf(user), balanceBefore - stakeAmount);

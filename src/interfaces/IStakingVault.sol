@@ -67,7 +67,11 @@ interface IStakingVault {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    /// @notice Stake tokens to the vault
+    /// @notice Stake tokens to the vault for current account
+    /// @dev Emits {Staked} event
+    function stake(uint256 amount) external;
+
+    /// @notice Stake tokens to the vault for specific account
     /// @dev Emits {Staked} event
     function stake(address account, uint256 amount) external;
 
