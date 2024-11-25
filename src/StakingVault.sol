@@ -8,7 +8,6 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { IStakingVault } from "./interfaces/IStakingVault.sol";
@@ -29,9 +28,9 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
 
     IERC20 public stakingToken;
 
-    mapping(address => uint256) public lastAccumulatedRewards;
-    mapping(address => uint256) private _rewards;
-    mapping(address => mapping(uint256 => UnstakeRequest)) private _unstakeRequests;
+    mapping(address account => uint256 lastAccumulatedReward) public lastAccumulatedRewards;
+    mapping(address account => uint256 reward) private _rewards;
+    mapping(address account => mapping(uint256 requestId => UnstakeRequest unstakeRequest)) private _unstakeRequests;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -68,8 +67,7 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
         _;
     }
 
-    /// @inheritdoc IStakingVault
-    function stake(uint256 amount) external updateReward(msg.sender) {
+    function stake(uint256 amount) external {
         stake(msg.sender, amount);
     }
 
@@ -78,7 +76,7 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
         if (amount == 0) revert ZeroAmount();
 
         _mint(account, amount);
-        IERC20(stakingToken).transferFrom(msg.sender, address(this), amount);
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
 
         emit Staked(account, amount);
     }
@@ -105,12 +103,13 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     }
 
     /// @inheritdoc IStakingVault
-    function cancelUnstakeRequests(uint256[] memory requestIds) external nonReentrant updateReward(msg.sender) {
-        if (requestIds.length == 0) revert EmptyRequestIds();
+    function cancelUnstakeRequests(uint256[] calldata requestIds) external nonReentrant updateReward(msg.sender) {
+        uint256 totalRequests = requestIds.length;
+        if (totalRequests == 0) revert EmptyRequestIds();
 
         address account = msg.sender;
         uint256 amount = 0;
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < totalRequests; i++) {
             uint256 requestId = requestIds[i];
             UnstakeRequest storage request = _unstakeRequests[account][requestId];
             if (request.state != UnstakeRequestState.PENDING) {
@@ -127,12 +126,13 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     }
 
     /// @inheritdoc IStakingVault
-    function unstake(uint256[] memory requestIds) public nonReentrant {
-        if (requestIds.length == 0) revert EmptyRequestIds();
+    function unstake(uint256[] calldata requestIds) external nonReentrant {
+        uint256 totalRequests = requestIds.length;
+        if (totalRequests == 0) revert EmptyRequestIds();
 
         address account = msg.sender;
         uint256 amount = 0;
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < totalRequests; i++) {
             uint256 requestId = requestIds[i];
             UnstakeRequest storage request = _unstakeRequests[account][requestId];
             if (request.state != UnstakeRequestState.PENDING) {

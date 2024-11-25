@@ -7,12 +7,12 @@ import { ERC20Votes } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20
 import { Nonces } from "@openzeppelin/contracts/utils/Nonces.sol";
 
 contract BsxToken is ERC20, ERC20Permit, ERC20Votes {
-    string internal constant NAME = "BSX";
-    string internal constant SYMBOL = "BSX";
-    uint256 internal constant TOTAL_SUPPLY = 1_000_000_000 ether;
+    string internal constant _NAME = "BSX";
+    string internal constant _SYMBOL = "BSX";
+    uint256 internal constant _TOTAL_SUPPLY = 1_000_000_000 ether;
 
-    constructor(address _initDistributor) ERC20(NAME, SYMBOL) ERC20Permit(NAME) {
-        _mint(_initDistributor, TOTAL_SUPPLY);
+    constructor(address _initDistributor) ERC20(_NAME, _SYMBOL) ERC20Permit(_NAME) {
+        _mint(_initDistributor, _TOTAL_SUPPLY);
     }
 
     function _update(address from, address to, uint256 amount) internal override(ERC20, ERC20Votes) {
@@ -24,6 +24,6 @@ contract BsxToken is ERC20, ERC20Permit, ERC20Votes {
     }
 
     function _maxSupply() internal pure virtual override returns (uint256) {
-        return TOTAL_SUPPLY;
+        return _TOTAL_SUPPLY;
     }
 }

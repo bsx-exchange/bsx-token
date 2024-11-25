@@ -153,6 +153,11 @@ contract StakingVaultTest is Test {
         stakingVault.stake(user, 0);
     }
 
+    function test_stake_revertIfZeroAddress() public {
+        vm.expectRevert(IStakingVault.ZeroAddress.selector);
+        stakingVault.stake(address(0), 1);
+    }
+
     function test_requestUnstake() public {
         vm.startPrank(user);
 

@@ -25,12 +25,12 @@ interface IStakingVault {
     /// @notice Thrown when request ids are empty
     error EmptyRequestIds();
 
-    /// @notice Thrown when user unstakes more than their stake balance
+    /// @notice Thrown when account unstake more than their stake balance
     error InsufficientStakeBalance(address account, uint256 amount, uint256 available);
 
     /// @notice Thrown when unstake request is in invalid state
     error InvalidRequestState(
-        address user, uint256 requestId, UnstakeRequestState current, UnstakeRequestState expected
+        address account, uint256 requestId, UnstakeRequestState current, UnstakeRequestState expected
     );
 
     /// @notice Thrown when reward period is zero
@@ -44,23 +44,23 @@ interface IStakingVault {
 
     /* ========== EVENTS ========== */
 
-    /// @notice Emitted when user stakes tokens
-    event Staked(address indexed user, uint256 amount);
+    /// @notice Emitted when account stakes tokens
+    event Staked(address indexed account, uint256 amount);
 
-    /// @notice Emitted when user requests unstake
-    event UnstakeRequested(address indexed user, uint256 requestId, uint256 amount);
+    /// @notice Emitted when account requests unstake
+    event UnstakeRequested(address indexed account, uint256 requestId, uint256 amount);
 
-    /// @notice Emitted when user cancels unstake request
-    event RequestCancelled(address indexed user, uint256 requestId);
+    /// @notice Emitted when account cancels unstake request
+    event RequestCancelled(address indexed account, uint256 requestId);
 
-    /// @notice Emitted when user unstake request is executed
-    event RequestExecuted(address indexed user, uint256 requestId);
+    /// @notice Emitted when account unstake request is executed
+    event RequestExecuted(address indexed account, uint256 requestId);
 
-    /// @notice Emitted when user unstakes tokens after cooldown period
-    event Unstaked(address indexed user, uint256 amount);
+    /// @notice Emitted when account unstakes tokens after cooldown period
+    event Unstaked(address indexed account, uint256 amount);
 
-    /// @notice Emitted when user claims rewards
-    event RewardsClaimed(address indexed user, uint256 amount);
+    /// @notice Emitted when account claims rewards
+    event RewardsClaimed(address indexed account, uint256 amount);
 
     /// @notice Emitted when reward config is updated
     event RewardConfigUpdated(uint256 rewardRate, uint256 rewardPeriod);
@@ -99,6 +99,6 @@ interface IStakingVault {
     /// @notice Get unstake request
     function getUnstakeRequest(address account, uint256 requestId) external view returns (UnstakeRequest memory);
 
-    /// @notice Get current unclaimed rewards for user
+    /// @notice Get current unclaimed rewards for account
     function getRewards(address account) external view returns (uint256);
 }
