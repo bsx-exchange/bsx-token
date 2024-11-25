@@ -46,6 +46,9 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
         external
         initializer
     {
+        if (_owner == address(0) || address(_stakingToken) == address(0)) revert ZeroAddress();
+        if (_rewardRate == 0 || _rewardPeriod == 0) revert ZeroAmount();
+
         __EIP712_init(NAME, VERSION);
         __ERC20_init(NAME, SYMBOL);
         __ERC20Votes_init();
@@ -74,6 +77,7 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
     /// @inheritdoc IStakingVault
     function stake(address account, uint256 amount) public nonReentrant updateReward(account) {
         if (amount == 0) revert ZeroAmount();
+        if (account == address(0)) revert ZeroAddress();
 
         _mint(account, amount);
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);

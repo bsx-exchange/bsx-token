@@ -39,6 +39,9 @@ interface IStakingVault {
     /// @notice Thrown when amount is zero
     error ZeroAmount();
 
+    /// @notice Thrown when account is zero address
+    error ZeroAddress();
+
     /// @notice Thrown when reward token is not transferable
     error NonTransferable();
 

@@ -53,6 +53,38 @@ contract StakingVaultTest is Test {
         assertEq(stakingVault.rewardPeriod(), 30 days);
     }
 
+    function test_initialize_revertIfInvalidInput() public {
+        address stakingVaultImpl = address(new StakingVault());
+
+        vm.expectRevert(IStakingVault.ZeroAddress.selector);
+        new TransparentUpgradeableProxy(
+            stakingVaultImpl,
+            owner,
+            abi.encodeWithSelector(StakingVault.initialize.selector, 0, address(stakingToken), rewardRate, rewardPeriod)
+        );
+
+        vm.expectRevert(IStakingVault.ZeroAddress.selector);
+        new TransparentUpgradeableProxy(
+            stakingVaultImpl,
+            owner,
+            abi.encodeWithSelector(StakingVault.initialize.selector, owner, 0, rewardRate, rewardPeriod)
+        );
+
+        vm.expectRevert(IStakingVault.ZeroAmount.selector);
+        new TransparentUpgradeableProxy(
+            stakingVaultImpl,
+            owner,
+            abi.encodeWithSelector(StakingVault.initialize.selector, owner, address(stakingToken), 0, rewardPeriod)
+        );
+
+        vm.expectRevert(IStakingVault.ZeroAmount.selector);
+        new TransparentUpgradeableProxy(
+            stakingVaultImpl,
+            owner,
+            abi.encodeWithSelector(StakingVault.initialize.selector, owner, address(stakingToken), rewardRate, 0)
+        );
+    }
+
     function test_stake() public {
         vm.startPrank(user);
 
