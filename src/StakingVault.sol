@@ -12,6 +12,10 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { IStakingVault } from "./interfaces/IStakingVault.sol";
 
+/// @title StakingVault
+/// @author BSX
+/// @notice Enables users to stake tokens and earn points based on their staked amount
+/// @dev Limitation: This contract only supports standard ERC20 tokens without fee-on-transfer mechanisms
 contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, ERC20VotesUpgradeable {
     using SafeERC20 for IERC20;
 
@@ -70,6 +74,7 @@ contract StakingVault is IStakingVault, Ownable2StepUpgradeable, ReentrancyGuard
         _;
     }
 
+    /// @inheritdoc IStakingVault
     function stake(uint256 amount) external {
         stake(msg.sender, amount);
     }
